@@ -1,0 +1,17 @@
+# Runtime dependencies (tested versions; compatible newer releases should work)
+fastapi>=0.110,<1
+uvicorn[standard]>=0.30
+sqlalchemy>=2.0.30,<3
+alembic>=1.13
+pydantic>=2.7,<3
+pydantic-settings>=2.2
+email-validator>=2.1
+argon2-cffi>=23.1
+PyJWT>=2.8
+cryptography>=42
+httpx>=0.27
+python-multipart>=0.0.9
+# Official provider SDKs (AI features are optional but these are installed with the app)
+groq>=0.9
+openai>=1.40
+anthropic>=0.34

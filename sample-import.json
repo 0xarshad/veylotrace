@@ -1,0 +1,148 @@
+{
+  "format": "veylotrace-export",
+  "version": 1,
+  "exported_at": "2026-11-03T12:00:00",
+  "tables": {
+    "expense_categories": [
+      {"id": 1, "name": "Food", "parent_id": null},
+      {"id": 2, "name": "Transport", "parent_id": null},
+      {"id": 3, "name": "Coffee", "parent_id": 1}
+    ],
+    "savings_goals": [
+      {"id": 1, "name": "Emergency fund", "target_amount": "50000.00", "target_date": "2027-06-30", "planned_monthly_contribution": "5000.00", "notes": "Sample savings goal"}
+    ],
+    "budgets": [
+      {"id": 1, "period": "monthly", "amount": "12000.00", "category_id": 1, "start_date": "2026-11-01", "end_date": "2026-11-30", "name": "Food budget"},
+      {"id": 2, "period": "monthly", "amount": "4000.00", "category_id": 2, "start_date": "2026-11-01", "end_date": "2026-11-30", "name": "Transport budget"}
+    ],
+    "expenses": [
+      {"id": 1, "occurred_at": "2026-10-21T09:10:00", "amount": "180.00", "category_id": 1, "subcategory_id": 3, "description": "Breakfast and coffee", "payment_method": "upi", "necessity": "essential", "notes": "Sample data"},
+      {"id": 2, "occurred_at": "2026-10-22T18:30:00", "amount": "240.00", "category_id": 2, "subcategory_id": null, "description": "Metro and bus", "payment_method": "card", "necessity": "essential", "notes": ""},
+      {"id": 3, "occurred_at": "2026-10-24T13:00:00", "amount": "520.00", "category_id": 1, "subcategory_id": null, "description": "Lunch with friends", "payment_method": "upi", "necessity": "non_essential", "notes": ""},
+      {"id": 4, "occurred_at": "2026-10-26T08:45:00", "amount": "95.00", "category_id": 1, "subcategory_id": 3, "description": "Coffee", "payment_method": "cash", "necessity": "non_essential", "notes": ""},
+      {"id": 5, "occurred_at": "2026-10-28T19:20:00", "amount": "310.00", "category_id": 2, "subcategory_id": null, "description": "Taxi", "payment_method": "upi", "necessity": "essential", "notes": ""},
+      {"id": 6, "occurred_at": "2026-10-30T12:15:00", "amount": "460.00", "category_id": 1, "subcategory_id": null, "description": "Groceries", "payment_method": "card", "necessity": "essential", "notes": ""},
+      {"id": 7, "occurred_at": "2026-11-01T10:00:00", "amount": "130.00", "category_id": 1, "subcategory_id": 3, "description": "Coffee and snack", "payment_method": "upi", "necessity": "non_essential", "notes": ""},
+      {"id": 8, "occurred_at": "2026-11-03T17:40:00", "amount": "220.00", "category_id": 2, "subcategory_id": null, "description": "Metro fare", "payment_method": "card", "necessity": "essential", "notes": ""}
+    ],
+    "income": [
+      {"id": 1, "occurred_at": "2026-10-25T09:00:00", "amount": "25000.00", "source_type": "salary", "description": "Sample salary", "notes": ""},
+      {"id": 2, "occurred_at": "2026-11-01T09:00:00", "amount": "25000.00", "source_type": "salary", "description": "Sample salary", "notes": ""}
+    ],
+    "transfers": [
+      {"id": 1, "occurred_at": "2026-11-01T09:15:00", "amount": "5000.00", "from_account": "Checking", "to_account": "Savings", "notes": "Sample internal transfer"}
+    ],
+    "savings_contributions": [
+      {"id": 1, "occurred_at": "2026-10-25T10:00:00", "amount": "3000.00", "goal_id": 1, "notes": "October contribution"},
+      {"id": 2, "occurred_at": "2026-11-01T10:00:00", "amount": "3000.00", "goal_id": 1, "notes": "November contribution"}
+    ],
+    "goals": [
+      {"id": 1, "name": "Finish personal finance course", "description": "Complete the sample learning goal", "start_date": "2026-10-20", "target_date": "2026-11-20", "progress": 50, "status": "active"}
+    ],
+    "milestones": [
+      {"id": 1, "goal_id": 1, "title": "Complete first half", "due_date": "2026-10-31", "completed": true},
+      {"id": 2, "goal_id": 1, "title": "Complete final lessons", "due_date": "2026-11-20", "completed": false}
+    ],
+    "tasks": [
+      {"id": 1, "name": "Review weekly expenses", "description": "Sample completed task", "priority": "high", "due_date": "2026-10-29", "estimated_min": 20, "actual_min": 25, "status": "completed", "notes": "", "completed_at": "2026-10-29T18:00:00", "goal_id": 1},
+      {"id": 2, "name": "Study a new lesson", "description": "Sample in-progress task", "priority": "medium", "due_date": "2026-11-06", "estimated_min": 30, "actual_min": null, "status": "in_progress", "notes": "", "completed_at": null, "goal_id": 1},
+      {"id": 3, "name": "Plan weekend walk", "description": "Sample pending task", "priority": "low", "due_date": "2026-11-08", "estimated_min": 15, "actual_min": null, "status": "pending", "notes": "", "completed_at": null, "goal_id": null}
+    ],
+    "workout_sessions": [
+      {"id": 1, "kind": "gym", "performed_at": "2026-10-22T07:00:00", "duration_min": 45, "activity_type": "Strength training", "distance_km": null, "calories_burned": 240, "notes": "Sample workout"},
+      {"id": 2, "kind": "cardio", "performed_at": "2026-10-27T07:15:00", "duration_min": 30, "activity_type": "Jogging", "distance_km": 3.2, "calories_burned": 210, "notes": "Easy pace"},
+      {"id": 3, "kind": "home", "performed_at": "2026-11-02T18:00:00", "duration_min": 25, "activity_type": "Bodyweight circuit", "distance_km": null, "calories_burned": 150, "notes": ""}
+    ],
+    "exercise_entries": [
+      {"id": 1, "workout_id": 1, "name": "Squat", "muscle_group": "Legs", "sets": 3, "reps": 10, "weight_kg": 40, "duration_min": null},
+      {"id": 2, "workout_id": 1, "name": "Dumbbell row", "muscle_group": "Back", "sets": 3, "reps": 12, "weight_kg": 12, "duration_min": null}
+    ],
+    "step_logs": [
+      {"id": 1, "log_date": "2026-10-21", "steps": 7200, "notes": ""},
+      {"id": 2, "log_date": "2026-10-23", "steps": 9100, "notes": ""},
+      {"id": 3, "log_date": "2026-10-25", "steps": 8400, "notes": ""},
+      {"id": 4, "log_date": "2026-10-27", "steps": 10200, "notes": ""},
+      {"id": 5, "log_date": "2026-10-30", "steps": 6800, "notes": ""},
+      {"id": 6, "log_date": "2026-11-02", "steps": 8800, "notes": ""}
+    ],
+    "sleep_logs": [
+      {"id": 1, "bedtime": "2026-10-21T22:45:00", "wake_time": "2026-10-22T06:45:00", "duration_min": 480, "quality": 4, "notes": ""},
+      {"id": 2, "bedtime": "2026-10-23T23:15:00", "wake_time": "2026-10-24T06:45:00", "duration_min": 450, "quality": 3, "notes": ""},
+      {"id": 3, "bedtime": "2026-10-26T22:30:00", "wake_time": "2026-10-27T06:30:00", "duration_min": 480, "quality": 4, "notes": ""},
+      {"id": 4, "bedtime": "2026-10-29T23:00:00", "wake_time": "2026-10-30T07:00:00", "duration_min": 480, "quality": 5, "notes": ""},
+      {"id": 5, "bedtime": "2026-11-01T23:20:00", "wake_time": "2026-11-02T07:00:00", "duration_min": 460, "quality": 4, "notes": ""}
+    ],
+    "food_items": [
+      {"id": 1, "name": "Oatmeal with banana", "serving_size": "1 bowl", "calories": 320, "protein_g": 12, "carbs_g": 58, "fat_g": 6, "fibre_g": 9, "favorite": true, "use_count": 4},
+      {"id": 2, "name": "Dal rice and vegetables", "serving_size": "1 plate", "calories": 620, "protein_g": 22, "carbs_g": 98, "fat_g": 14, "fibre_g": 12, "favorite": false, "use_count": 3},
+      {"id": 3, "name": "Paneer wrap", "serving_size": "1 wrap", "calories": 480, "protein_g": 26, "carbs_g": 48, "fat_g": 18, "fibre_g": 7, "favorite": false, "use_count": 2}
+    ],
+    "meals": [
+      {"id": 1, "meal_type": "breakfast", "eaten_at": "2026-11-01T08:00:00", "name": "Oatmeal breakfast", "is_template": false, "notes": ""},
+      {"id": 2, "meal_type": "lunch", "eaten_at": "2026-11-01T13:00:00", "name": "Dal rice lunch", "is_template": false, "notes": ""},
+      {"id": 3, "meal_type": "dinner", "eaten_at": "2026-11-02T19:30:00", "name": "Paneer wrap dinner", "is_template": false, "notes": ""},
+      {"id": 4, "meal_type": "breakfast", "eaten_at": "2026-11-03T08:15:00", "name": "Oatmeal breakfast", "is_template": false, "notes": ""}
+    ],
+    "meal_items": [
+      {"id": 1, "meal_id": 1, "food_item_id": 1, "name": "Oatmeal with banana", "quantity": 1, "serving_size": "1 bowl", "calories": 320, "protein_g": 12, "carbs_g": 58, "fat_g": 6, "fibre_g": 9},
+      {"id": 2, "meal_id": 2, "food_item_id": 2, "name": "Dal rice and vegetables", "quantity": 1, "serving_size": "1 plate", "calories": 620, "protein_g": 22, "carbs_g": 98, "fat_g": 14, "fibre_g": 12},
+      {"id": 3, "meal_id": 3, "food_item_id": 3, "name": "Paneer wrap", "quantity": 1, "serving_size": "1 wrap", "calories": 480, "protein_g": 26, "carbs_g": 48, "fat_g": 18, "fibre_g": 7},
+      {"id": 4, "meal_id": 4, "food_item_id": 1, "name": "Oatmeal with banana", "quantity": 1, "serving_size": "1 bowl", "calories": 320, "protein_g": 12, "carbs_g": 58, "fat_g": 6, "fibre_g": 9}
+    ],
+    "water_intakes": [
+      {"id": 1, "logged_at": "2026-11-01T09:00:00", "amount_ml": 500},
+      {"id": 2, "logged_at": "2026-11-01T14:00:00", "amount_ml": 750},
+      {"id": 3, "logged_at": "2026-11-02T09:00:00", "amount_ml": 600},
+      {"id": 4, "logged_at": "2026-11-02T15:00:00", "amount_ml": 800},
+      {"id": 5, "logged_at": "2026-11-03T09:00:00", "amount_ml": 500}
+    ],
+    "books": [
+      {"id": 1, "title": "Atomic Habits", "author": "James Clear", "total_pages": 320, "status": "reading", "completed_on": null, "notes": "Sample reading record"},
+      {"id": 2, "title": "The Psychology of Money", "author": "Morgan Housel", "total_pages": 256, "status": "completed", "completed_on": "2026-10-28", "notes": ""}
+    ],
+    "reading_sessions": [
+      {"id": 1, "read_at": "2026-10-22T20:00:00", "book_id": 1, "pages": 18, "duration_min": 25, "notes": ""},
+      {"id": 2, "read_at": "2026-10-25T20:15:00", "book_id": 1, "pages": 22, "duration_min": 30, "notes": ""},
+      {"id": 3, "read_at": "2026-10-28T21:00:00", "book_id": 2, "pages": 30, "duration_min": 35, "notes": "Finished book"},
+      {"id": 4, "read_at": "2026-11-02T20:30:00", "book_id": 1, "pages": 15, "duration_min": 20, "notes": ""}
+    ],
+    "screen_time_logs": [
+      {"id": 1, "log_date": "2026-11-01", "duration_min": 90, "app_category": "Learning", "classification": "productive", "notes": ""},
+      {"id": 2, "log_date": "2026-11-01", "duration_min": 75, "app_category": "Video", "classification": "entertainment", "notes": ""},
+      {"id": 3, "log_date": "2026-11-02", "duration_min": 110, "app_category": "Work", "classification": "productive", "notes": ""},
+      {"id": 4, "log_date": "2026-11-02", "duration_min": 60, "app_category": "Social media", "classification": "entertainment", "notes": ""}
+    ],
+    "habit_logs": [
+      {"id": 1, "log_date": "2026-11-01", "name": "Morning stretch", "completed": true, "value": 10, "notes": "10 minutes"},
+      {"id": 2, "log_date": "2026-11-02", "name": "Morning stretch", "completed": true, "value": 12, "notes": "12 minutes"},
+      {"id": 3, "log_date": "2026-11-03", "name": "Morning stretch", "completed": false, "value": null, "notes": ""}
+    ],
+    "skills": [
+      {"id": 1, "name": "Personal finance", "level": "beginner", "notes": "Sample skill"}
+    ],
+    "courses": [
+      {"id": 1, "name": "Personal Finance Basics", "kind": "course", "provider": "Sample Academy", "status": "in_progress", "progress": 45, "start_date": "2026-10-20", "completed_on": null, "notes": ""},
+      {"id": 2, "name": "First Aid Basics", "kind": "certification", "provider": "Sample Academy", "status": "planned", "progress": 0, "start_date": null, "completed_on": null, "notes": ""}
+    ],
+    "study_sessions": [
+      {"id": 1, "studied_at": "2026-10-23T19:00:00", "subject": "Personal finance", "duration_min": 35, "topic": "Budgeting", "material": "Sample lesson 1", "practical_exercises": "Draft a monthly budget", "progress": 60, "skill_id": 1, "course_id": 1, "notes": ""},
+      {"id": 2, "studied_at": "2026-10-29T19:15:00", "subject": "Personal finance", "duration_min": 45, "topic": "Savings", "material": "Sample lesson 2", "practical_exercises": "Set a savings target", "progress": 80, "skill_id": 1, "course_id": 1, "notes": ""},
+      {"id": 3, "studied_at": "2026-11-02T18:30:00", "subject": "Personal finance", "duration_min": 30, "topic": "Cash flow", "material": "Sample lesson 3", "practical_exercises": "Review sample transactions", "progress": 100, "skill_id": 1, "course_id": 1, "notes": ""}
+    ],
+    "social_activities": [
+      {"id": 1, "kind": "friends", "activity": "Dinner with friends", "occurred_at": "2026-10-24T19:00:00", "duration_min": 120, "participants": "3 friends", "location": "Sample cafe", "description": "Sample social activity", "personal_notes": ""},
+      {"id": 2, "kind": "outing", "activity": "Park walk", "occurred_at": "2026-11-01T16:00:00", "duration_min": 60, "participants": "A friend", "location": "City park", "description": "Weekend outing", "personal_notes": ""}
+    ],
+    "challenges": [
+      {"id": 1, "name": "Reach 8000 steps", "description": "Sample automatic challenge", "metric": "steps", "comparator": "gte", "target": 8000, "frequency": "daily", "start_date": "2026-11-01", "end_date": "2026-11-14", "status": "active", "paused_on": null, "pauses": []},
+      {"id": 2, "name": "Mark a daily win", "description": "Sample manual challenge", "metric": "manual", "comparator": "gte", "target": 1, "frequency": "daily", "start_date": "2026-11-01", "end_date": "2026-11-14", "status": "active", "paused_on": null, "pauses": []}
+    ],
+    "challenge_progress": [
+      {"id": 1, "challenge_id": 2, "period_start": "2026-11-01", "value": 1, "completed": true},
+      {"id": 2, "challenge_id": 2, "period_start": "2026-11-02", "value": 1, "completed": true}
+    ],
+    "challenge_badges": [
+      {"id": 1, "challenge_id": 2, "code": "first_win", "awarded_on": "2026-11-01"}
+    ]
+  }
+}

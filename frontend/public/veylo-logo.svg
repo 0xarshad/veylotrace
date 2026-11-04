@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <defs>
+    <linearGradient id="veylo-gradient" x1="5" y1="4" x2="43" y2="45" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#71717a"/>
+      <stop offset=".55" stop-color="#27272a"/>
+      <stop offset="1" stop-color="#09090b"/>
+    </linearGradient>
+    <linearGradient id="veylo-line" x1="11" y1="17" x2="38" y2="31" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fff"/>
+      <stop offset="1" stop-color="#d4d4d8"/>
+    </linearGradient>
+  </defs>
+  <rect x="1" y="1" width="46" height="46" rx="15" fill="url(#veylo-gradient)"/>
+  <rect x="1.5" y="1.5" width="45" height="45" rx="14.5" stroke="#fff" stroke-opacity=".35"/>
+  <path d="m10 13 13.8 22L38 13" stroke="url(#veylo-line)" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M11.5 24h6.2l3.1-5.2 5.1 10.4 3.1-5.2h7.5" stroke="#d4d4d8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="37" cy="24" r="2.1" fill="#fafafa"/>
+</svg>
