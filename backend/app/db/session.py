@@ -1,7 +1,8 @@
 from collections.abc import Iterator
+from pathlib import Path
 
 from sqlalchemy import create_engine, event
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Engine, make_url
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import get_settings
@@ -13,6 +14,9 @@ _SessionLocal: sessionmaker[Session] | None = None
 def _make_engine(url: str) -> Engine:
     kwargs: dict = {"pool_pre_ping": True}
     if url.startswith("sqlite"):
+        database_path = make_url(url).database
+        if database_path and database_path != ":memory:" and not database_path.startswith("file:"):
+            Path(database_path).expanduser().parent.mkdir(parents=True, exist_ok=True)
         kwargs["connect_args"] = {"check_same_thread": False}
         if ":memory:" in url or url == "sqlite://":
             from sqlalchemy.pool import StaticPool

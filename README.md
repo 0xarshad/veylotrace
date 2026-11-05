@@ -11,7 +11,7 @@ SQLite database. The AI assistant is optional.
 
 ## Get started
 
-You’ll need Python 3.10 or newer and Node.js 18 or newer. From the project directory, run:
+You’ll need Python 3.10 or newer and an internet connection for the first install. From the project directory, run:
 
 ```bash
 ./install.sh
@@ -19,8 +19,9 @@ You’ll need Python 3.10 or newer and Node.js 18 or newer. From the project dir
 ```
 
 The installer creates `backend/.env` from the example configuration, generates the required secrets, and installs the
-backend and frontend dependencies. It also checks for Cloudflare Tunnel (`cloudflared`) and downloads a local copy if
-needed. You can enter a Groq API key during installation or leave it blank.
+backend and frontend dependencies. It uses system Node.js 18+ when available or downloads a project-local Node.js LTS
+copy, and it checks for Cloudflare Tunnel (`cloudflared`) and downloads that locally when needed. You can enter a Groq
+API key during installation or leave it blank.
 
 When startup finishes, `run.sh` prints the local app address, a temporary public URL, and the API docs address. The
 public URL is provided by a Cloudflare Quick Tunnel, changes each time, and works only while `run.sh` is running. Anyone
@@ -71,9 +72,10 @@ exports. Administrators can manage database backups under **Settings → Admin �
 ## Development
 
 The frontend uses React, TypeScript, Vite, Tailwind CSS, TanStack Query, and Recharts. The backend uses FastAPI,
-SQLAlchemy, and Alembic migrations. SQLite is the default database.
+SQLAlchemy, and Alembic migrations. SQLite is the default database. Run these commands from the project root:
 
 ```bash
+export PATH="$PWD/backend/.tools/node/bin:$PATH"
 (cd frontend && npm test && npm run build)
 (cd backend && .venv/bin/pytest -q)
 ```

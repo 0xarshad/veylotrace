@@ -12,6 +12,11 @@ BACKEND_PORT="${BACKEND_PORT:-8100}"
 FRONTEND_PORT="${FRONTEND_PORT:-5173}"
 PUBLIC_TUNNEL=1
 
+# Use the project-local Node.js installed by install.sh for Vite's env shebang.
+if [ -x "$BACKEND/.tools/node/bin/node" ]; then
+  export PATH="$BACKEND/.tools/node/bin:$PATH"
+fi
+
 log() { printf '\033[1;36m[veylotrace]\033[0m %s\n' "$*"; }
 die() { printf '\033[1;31m[veylotrace] %s\033[0m\n' "$*" >&2; exit 1; }
 
@@ -82,8 +87,8 @@ for _ in $(seq 1 60); do
 done
 [ "$backend_ready" -eq 1 ] || die "Backend did not become ready within 30 seconds."
 
-log "Starting frontend on http://localhost:$FRONTEND_PORT…"
-(cd "$FRONTEND" && VITE_API_PROXY="http://127.0.0.1:$BACKEND_PORT" exec ./node_modules/.bin/vite --port "$FRONTEND_PORT" --strictPort) &
+log "Starting frontend on http://127.0.0.1:$FRONTEND_PORT…"
+(cd "$FRONTEND" && VITE_API_PROXY="http://127.0.0.1:$BACKEND_PORT" exec ./node_modules/.bin/vite --host 127.0.0.1 --port "$FRONTEND_PORT" --strictPort) &
 pids+=("$!")
 
 if [ "$PUBLIC_TUNNEL" -eq 1 ]; then
