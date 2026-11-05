@@ -11,6 +11,8 @@ export default defineConfig(({ mode }) => {
     resolve: { alias: { '@': path.resolve(__dirname, 'src') } },
     server: {
       port: 5173,
+      // Cloudflare Quick Tunnels generate a random hostname on each launch.
+      allowedHosts: ['.trycloudflare.com'],
       // Same-origin proxy: the HttpOnly refresh cookie (SameSite=Strict) works without CORS.
       proxy: { '/api': { target: api, changeOrigin: false } },
     },

@@ -8,6 +8,7 @@ BACKEND="$ROOT/backend"
 FRONTEND="$ROOT/frontend"
 VENV="$BACKEND/.venv"
 ENV_FILE="$BACKEND/.env"
+CLOUDFLARED="$BACKEND/.tools/cloudflared"
 
 log() { printf '\033[1;36m[veylotrace install]\033[0m %s\n' "$*"; }
 die() { printf '\033[1;31m[veylotrace install] %s\033[0m\n' "$*" >&2; exit 1; }
@@ -16,8 +17,35 @@ command -v python3 >/dev/null || die "Python 3.10+ is required."
 command -v node >/dev/null || die "Node.js 18+ is required."
 command -v npm >/dev/null || die "npm is required."
 command -v sha256sum >/dev/null || die "sha256sum is required."
+command -v curl >/dev/null || die "curl is required to download dependencies."
 python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)' || die "Python 3.10 or newer is required."
 node -e 'process.exit(Number(process.versions.node.split(".")[0]) >= 18 ? 0 : 1)' || die "Node.js 18 or newer is required."
+
+# Keep cloudflared in the project when it is not already installed system-wide,
+# so `./run.sh --public` works without a separate manual setup step.
+if command -v cloudflared >/dev/null; then
+  log "Cloudflare Tunnel detected: $(command -v cloudflared)"
+elif [ -x "$CLOUDFLARED" ]; then
+  log "Cloudflare Tunnel detected in the project: $CLOUDFLARED"
+else
+  case "$(uname -s):$(uname -m)" in
+    Linux:x86_64) cloudflared_platform="linux-amd64" ;;
+    Linux:aarch64|Linux:arm64) cloudflared_platform="linux-arm64" ;;
+    Linux:armv7l) cloudflared_platform="linux-arm" ;;
+    Darwin:x86_64) cloudflared_platform="darwin-amd64" ;;
+    Darwin:arm64) cloudflared_platform="darwin-arm64" ;;
+    *) die "No automatic cloudflared download for $(uname -s)/$(uname -m). Install cloudflared manually to use ./run.sh --public." ;;
+  esac
+  mkdir -p "$(dirname "$CLOUDFLARED")"
+  log "Downloading Cloudflare Tunnel for the optional public URL…"
+  curl -fsSL --retry 3 \
+    "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-$cloudflared_platform" \
+    -o "$CLOUDFLARED.tmp"
+  chmod 700 "$CLOUDFLARED.tmp"
+  mv "$CLOUDFLARED.tmp" "$CLOUDFLARED"
+  "$CLOUDFLARED" --version >/dev/null || die "Downloaded cloudflared could not run on this system."
+  log "Cloudflare Tunnel installed in the project: $CLOUDFLARED"
+fi
 
 if [ ! -x "$VENV/bin/python" ]; then
   log "Creating backend virtual environment…"

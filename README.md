@@ -17,8 +17,13 @@ Prerequisites: Python ≥ 3.10, Node ≥ 18.
 
 ```bash
 ./install.sh   # creates backend/.env, asks for an optional Groq key, installs dependencies
-./run.sh       # starts backend and frontend together; Ctrl+C stops both
+./run.sh       # starts backend, frontend, and prints a temporary public HTTPS URL
+./run.sh --local  # run locally without a public tunnel
 ```
+
+The public URL uses a free Cloudflare Quick Tunnel and changes each time. Anyone who has the link can reach the app
+while the tunnel is running, so use it for temporary demos with test data. Press Ctrl+C to stop the tunnel and servers.
+Quick Tunnels are for development and testing, not production. See [Cloudflare's Quick Tunnel docs](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/).
 
 The installer preserves an existing `backend/.env` and refreshes its permissions. If you provide a Groq key, open
 **AI Assistant → Providers → Add provider → Groq** after signing up. The key is imported into that account's encrypted
