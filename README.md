@@ -1,107 +1,85 @@
-# VeyloTrace — personal life management (LIFE OS)
+<p align="center">
+  <img src="frontend/public/veylo-logo.svg" alt="VeyloTrace logo" width="88">
+</p>
 
-A local-first, secure, full-stack app for tracking finances, health, nutrition, lifestyle, productivity, learning and
-social life, with dashboards, reports, challenges, backup/export — and **optional, independent** AI analysis.
-The app is fully useful with no AI provider configured.
+<h1 align="center">VeyloTrace</h1>
 
-| Layer | Tech |
-|---|---|
-| Frontend | React 18, TypeScript, Vite, Tailwind CSS, TanStack Query, Recharts |
-| Backend | Python 3.10+, FastAPI, SQLAlchemy 2, Alembic, Argon2id, PyJWT |
-| Database | SQLite (local) — schema/queries are PostgreSQL-portable |
-| AI (optional) | Groq, OpenAI, Anthropic (official SDKs), Ollama (local REST), Hugging Face (Inference Providers / dedicated endpoints) |
+<p align="center">A personal tracker for health, finances, nutrition, work, learning, and everyday life.</p>
 
-## Quick start (local)
+VeyloTrace brings daily logs, goals, reports, and challenges into one app. It runs locally and stores its data in a local
+SQLite database. The AI assistant is optional.
 
-Prerequisites: Python ≥ 3.10, Node ≥ 18.
+## Get started
+
+You’ll need Python 3.10 or newer and Node.js 18 or newer. From the project directory, run:
 
 ```bash
-./install.sh   # creates backend/.env, asks for an optional Groq key, installs dependencies
-./run.sh       # starts backend, frontend, and prints a temporary public HTTPS URL
-./run.sh --local  # run locally without a public tunnel
+./install.sh
+./run.sh
 ```
 
-The public URL uses a free Cloudflare Quick Tunnel and changes each time. Anyone who has the link can reach the app
-while the tunnel is running, so use it for temporary demos with test data. Press Ctrl+C to stop the tunnel and servers.
-Quick Tunnels are for development and testing, not production. See [Cloudflare's Quick Tunnel docs](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/).
+The installer creates `backend/.env` from the example configuration, generates the required secrets, and installs the
+backend and frontend dependencies. It also checks for Cloudflare Tunnel (`cloudflared`) and downloads a local copy if
+needed. You can enter a Groq API key during installation or leave it blank.
 
-The installer preserves an existing `backend/.env` and refreshes its permissions. If you provide a Groq key, open
-**AI Assistant → Providers → Add provider → Groq** after signing up. The key is imported into that account's encrypted
-provider settings; the existing cloud-data consent still applies. The app works without Groq or any AI provider.
-
-Open <http://localhost:5173> and **Create account** — you can sign in straight away (email verification is only required once you configure `EMAIL_BACKEND=smtp`, or force it with `REQUIRE_EMAIL_VERIFICATION=true`).
-With the default `EMAIL_BACKEND=file`, emails (e.g. password reset links) are written to `backend/data/outbox/` instead of being sent:
+When startup finishes, `run.sh` prints the local app address, a temporary public URL, and the API docs address. The
+public URL is provided by a Cloudflare Quick Tunnel, changes each time, and works only while `run.sh` is running. Anyone
+with the link can reach the app, so use test data when sharing it. To run locally without a public URL, use:
 
 ```bash
-cd backend && python -m app.cli outbox          # prints the verification link
-# or skip the link:
-python -m app.cli verify-email you@example.com
+./run.sh --local
 ```
 
-Create an administrator (public registration can never create one):
+Press Ctrl+C to stop the app and tunnel.
+
+## First sign-in
+
+Open <http://localhost:5173> and create an account. By default, the app writes email messages such as verification and
+password reset links to `backend/data/outbox/` instead of sending them. To view them:
 
 ```bash
-cd backend && python -m app.cli create-admin you@example.com "Your Name"
+cd backend && .venv/bin/python -m app.cli outbox
 ```
 
-To point the dev proxy elsewhere: `VITE_API_PROXY=http://127.0.0.1:9000 npm run dev`.
-Interactive API docs (development only): <http://localhost:8100/api/docs>.
-
-## Configuration
-
-All backend settings are environment variables (see [`backend/.env.example`](backend/.env.example)); nothing secret is in
-source control. Important ones:
-
-| Variable | Purpose |
-|---|---|
-| `JWT_SECRET` | ≥ 32 random chars; signs access tokens (the app refuses to start without it) |
-| `ENCRYPTION_KEY` | Fernet key; encrypts AI provider credentials at rest. **Back it up** — losing it makes saved provider keys unreadable |
-| `CORS_ORIGINS`, `FRONTEND_URL` | Allowed browser origins / link base for emails |
-| `COOKIE_SECURE` | Must be `true` behind HTTPS (enforced in production) |
-| `EMAIL_BACKEND` | `file` (dev) or `smtp` (+ `SMTP_*`) |
-| `AUTO_BACKUP_HOURS`, `BACKUP_RETENTION`, `BACKUP_PASSPHRASE` | Scheduled / encrypted backups |
-| `GROQ_API_KEY` | Optional installer key, offered when adding Groq in AI provider settings |
-
-## Tests
+You can also mark an account as verified from the command line:
 
 ```bash
-cd backend && pytest -q                 # auth, RBAC, isolation, CRUD for every module, analytics, AI, backup/import
-cd frontend && npm test && npm run build
+cd backend && .venv/bin/python -m app.cli verify-email you@example.com
 ```
 
-## Local deployment (single machine)
+To create an administrator account:
 
 ```bash
-cd frontend && npm run build                 # static files in frontend/dist
-cd backend && APP_ENV=production uvicorn app.main:app --host 127.0.0.1 --port 8100
+cd backend && .venv/bin/python -m app.cli create-admin you@example.com "Your Name"
 ```
 
-Serve `frontend/dist` and reverse-proxy `/api` to the backend from **one origin** over HTTPS (Caddy, nginx, …) so the
-HttpOnly `SameSite=Strict` refresh cookie works. Example Caddy:
+## AI assistant
 
+AI features are optional. After creating an account, go to **AI Assistant → Providers** to add a provider. If you entered
+a Groq key during installation, choose Groq and leave the key field empty to use it. The app still asks you to enable
+cloud-data consent before sending data to an external provider.
+
+Configuration options are listed in [`backend/.env.example`](backend/.env.example). Keep `backend/.env` private; it
+contains the app’s signing and encryption keys.
+
+## Data and backups
+
+Users can import and export their data under **Settings → Data & Backup**, including JSON backups and per-section CSV
+exports. Administrators can manage database backups under **Settings → Admin → Database backups**. See
+[`docs/OPERATIONS.md`](docs/OPERATIONS.md) for backup and restore details.
+
+## Development
+
+The frontend uses React, TypeScript, Vite, Tailwind CSS, TanStack Query, and Recharts. The backend uses FastAPI,
+SQLAlchemy, and Alembic migrations. SQLite is the default database.
+
+```bash
+(cd frontend && npm test && npm run build)
+(cd backend && .venv/bin/pytest -q)
 ```
-your.domain {
-    handle /api/* { reverse_proxy 127.0.0.1:8100 }
-    handle { root * /path/to/frontend/dist
-             try_files {path} /index.html
-             file_server }
-}
-```
 
-Set in `.env`: `APP_ENV=production`, `COOKIE_SECURE=true`, `CORS_ORIGINS=https://your.domain`,
-`FRONTEND_URL=https://your.domain`, `EMAIL_BACKEND=smtp` with SMTP credentials. Run a single worker (rate limiting and the
-backup scheduler are in-process; see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#scaling-notes)).
+The interactive API docs are available at <http://localhost:8100/api/docs> while the app is running.
 
-## Backup, restore and your data
-
-* **Users:** Settings → Data & Backup — full JSON export, per-module CSV exports, validated **import with dry-run and
-  duplicate detection**. Your records never depend on the AI service.
-* **Administrators:** Settings → Admin → Database backups (consistent SQLite snapshots with SHA-256 + integrity
-  verification, optional encryption with `BACKUP_PASSPHRASE`, restore with typed confirmation), or via CLI:
-  `python -m app.cli backup`. Details and PostgreSQL notes: [docs/OPERATIONS.md](docs/OPERATIONS.md).
-
-## Documentation
-
-* [Architecture](docs/ARCHITECTURE.md) — modules, data model, request flow, AI design
-* [Security](docs/SECURITY.md) — threat model, controls, how each requirement is met
-* [Operations](docs/OPERATIONS.md) — migrations, backups, restore, PostgreSQL, troubleshooting
+For a single-machine deployment, build the frontend with `cd frontend && npm run build`, then serve `frontend/dist` and
+reverse-proxy `/api` to the backend over HTTPS. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and
+[`docs/SECURITY.md`](docs/SECURITY.md) for implementation details.
