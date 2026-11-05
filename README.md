@@ -16,18 +16,13 @@ The app is fully useful with no AI provider configured.
 Prerequisites: Python ≥ 3.10, Node ≥ 18.
 
 ```bash
-# 1. Backend
-cd backend
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-python scripts/init_env.py            # writes .env with fresh random JWT_SECRET + ENCRYPTION_KEY (never overwrites)
-uvicorn app.main:app --port 8100      # applies database migrations automatically on start-up
-
-# 2. Frontend (new terminal)
-cd frontend
-npm install
-npm run dev                           # http://localhost:5173  (proxies /api to http://127.0.0.1:8100)
+./install.sh   # creates backend/.env, asks for an optional Groq key, installs dependencies
+./run.sh       # starts backend and frontend together; Ctrl+C stops both
 ```
+
+The installer preserves an existing `backend/.env` and refreshes its permissions. If you provide a Groq key, open
+**AI Assistant → Providers → Add provider → Groq** after signing up. The key is imported into that account's encrypted
+provider settings; the existing cloud-data consent still applies. The app works without Groq or any AI provider.
 
 Open <http://localhost:5173> and **Create account** — you can sign in straight away (email verification is only required once you configure `EMAIL_BACKEND=smtp`, or force it with `REQUIRE_EMAIL_VERIFICATION=true`).
 With the default `EMAIL_BACKEND=file`, emails (e.g. password reset links) are written to `backend/data/outbox/` instead of being sent:
@@ -60,6 +55,7 @@ source control. Important ones:
 | `COOKIE_SECURE` | Must be `true` behind HTTPS (enforced in production) |
 | `EMAIL_BACKEND` | `file` (dev) or `smtp` (+ `SMTP_*`) |
 | `AUTO_BACKUP_HOURS`, `BACKUP_RETENTION`, `BACKUP_PASSPHRASE` | Scheduled / encrypted backups |
+| `GROQ_API_KEY` | Optional installer key, offered when adding Groq in AI provider settings |
 
 ## Tests
 

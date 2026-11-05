@@ -18,16 +18,34 @@ DEFAULT_TARGETS = {
 }
 
 
-def suggested_nutrition_targets(target_weight_kg: float, calories: float = DEFAULT_TARGETS["calories"]) -> dict[str, int]:
-    """Editable adult starter targets; calories and hydration stay user-set because weight alone is insufficient."""
+ACTIVITY_FACTORS = {"sedentary": 1.2, "light": 1.375, "moderate": 1.55, "very_active": 1.725}
+
+
+def suggested_calories(sex_for_estimates: str, age_years: int, height_cm: float, weight_kg: float, activity_level: str) -> int:
+    """Estimate adult maintenance calories with Mifflin–St Jeor and a selected activity factor."""
+    resting = 10 * weight_kg + 6.25 * height_cm - 5 * age_years + (5 if sex_for_estimates == "male" else -161)
+    return max(1200, round((resting * ACTIVITY_FACTORS[activity_level]) / 50) * 50)
+
+
+def suggested_nutrition_targets(
+    target_weight_kg: float, calories: float = DEFAULT_TARGETS["calories"], *,
+    sex_for_estimates: str | None = None, age_years: int | None = None,
+    height_cm: float | None = None, weight_kg: float | None = None, activity_level: str | None = None,
+) -> dict[str, int]:
+    """Editable adult starter macro goals; calorie estimates require the full profile."""
+    if all(v is not None for v in (sex_for_estimates, age_years, height_cm, weight_kg, activity_level)):
+        calories = suggested_calories(sex_for_estimates, age_years, height_cm, weight_kg, activity_level)
     protein = max(round(target_weight_kg * 0.8), round(calories * 0.10 / 4))
     remaining_kcal = max(calories - protein * 4, 0)
-    return {
+    goals = {
         "protein_g": protein,
         "carbs_g": round(remaining_kcal * 0.65 / 4),
         "fat_g": round(remaining_kcal * 0.35 / 9),
         "fibre_g": round(calories * 0.014),
     }
+    if all(v is not None for v in (sex_for_estimates, age_years, height_cm, weight_kg, activity_level)):
+        goals["calories"] = int(calories)
+    return goals
 
 DEFAULT_WIDGETS = [
     "daily_overview",

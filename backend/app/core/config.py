@@ -48,6 +48,7 @@ class Settings(BaseSettings):
     backup_passphrase: str = ""  # optional: encrypt backups at rest
 
     ai_request_timeout_seconds: int = 60
+    groq_api_key: str = ""  # Optional installer-provided key, copied into a user config only on explicit setup.
 
     @field_validator("cookie_samesite")
     @classmethod

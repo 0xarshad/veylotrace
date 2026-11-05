@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/Common'
 import type { CrudConfig } from '@/crud/ModuleCrud'
+import { BODY_PARTS, bodyPartForMuscle, defaultMetricForExercise, EXERCISES_BY_GROUP, MUSCLES_BY_BODY_PART } from '@/crud/configs/exerciseCatalog'
 import { addDays, fmtDate, fmtDateTime, minutes, num, toDateStr } from '@/lib/format'
 
 export const gymConfig: CrudConfig = {
@@ -13,18 +14,21 @@ export const gymConfig: CrudConfig = {
   fields: [
     { name: 'performed_at', label: 'Date & time', type: 'datetime', required: true },
     { name: 'duration_min', label: 'Duration (min)', type: 'number', max: 1440 },
-    { name: 'exercises', label: 'Exercises', type: 'list', listLabel: 'Add exercise', listFields: [
-      { name: 'name', label: 'Exercise', type: 'text', required: true },
-      { name: 'muscle_group', label: 'Muscle group', type: 'text' },
+    { name: 'exercises', label: 'Exercises by body part', type: 'list', bodyPartField: 'body_part', bodyPartOptions: BODY_PARTS.map((name) => ({ value: name, label: name })), bodyPartForGroup: bodyPartForMuscle, groupField: 'muscle_group', groupOptionsFor: (part) => (MUSCLES_BY_BODY_PART[part] ?? []).map((name) => ({ value: name, label: name })), listLabel: 'Add exercise', listFields: [
+      { name: 'muscle_group', label: 'Muscle group', type: 'text', required: true, options: Object.keys(EXERCISES_BY_GROUP).map((name) => ({ value: name, label: name })), help: 'Choose the specific muscle.' },
+      { name: 'body_part', label: 'Body part', type: 'text', required: true, defaultFor: (row) => bodyPartForMuscle(String(row.muscle_group ?? '')), options: BODY_PARTS.map((name) => ({ value: name, label: name })) },
+      { name: 'name', label: 'Exercise', type: 'text', required: true, optionsFor: (row) => (EXERCISES_BY_GROUP[row.muscle_group] ?? []).map((name) => ({ value: name, label: name })), deriveOnChange: (name) => ({ progress_metric: defaultMetricForExercise(String(name)) }), help: 'Choose a suggested exercise or enter any custom exercise.' },
+      { name: 'progress_metric', label: 'Track progress by', type: 'select', required: true, default: 'weight_kg', defaultFor: (row) => defaultMetricForExercise(String(row.name ?? '')), options: [{ value: 'weight_kg', label: 'Load (kg)' }, { value: 'reps', label: 'Reps' }, { value: 'duration_min', label: 'Time (min)' }] },
       { name: 'sets', label: 'Sets', type: 'number', step: '1' },
       { name: 'reps', label: 'Reps', type: 'number', step: '1' },
       { name: 'weight_kg', label: 'Weight (kg)', type: 'number', step: '0.5' },
+      { name: 'duration_min', label: 'Time (min)', type: 'number', step: '0.1', help: 'Use for holds such as planks and dead hangs.' },
     ] },
     { name: 'notes', label: 'Notes', type: 'textarea' },
   ],
   columns: [
     { header: 'When', cell: (r) => fmtDateTime(r.performed_at) },
-    { header: 'Exercises', cell: (r) => (r.exercises.length ? r.exercises.map((e: any) => `${e.name}${e.sets ? ` ${e.sets}×${e.reps ?? '?'}` : ''}${e.weight_kg ? ` @ ${e.weight_kg}kg` : ''}`).join(', ') : '—'), className: 'max-w-xs truncate' },
+    { header: 'Exercises', cell: (r) => (r.exercises.length ? r.exercises.map((e: any) => `${e.body_part ? `${e.body_part} / ` : ''}${e.muscle_group ? `${e.muscle_group}: ` : ''}${e.name}${e.sets ? ` ${e.sets}×${e.reps ?? '?'}` : ''}${e.weight_kg != null ? ` @ ${e.weight_kg}kg` : e.duration_min != null ? ` · ${e.duration_min} min` : ''}`).join(', ') : '—'), className: 'max-w-xs truncate' },
     { header: 'Duration', cell: (r) => minutes(r.duration_min) },
   ],
 }

@@ -98,6 +98,9 @@ class UserSettings(TimestampMixin, Base):
     starting_weight_kg: Mapped[float | None] = mapped_column(nullable=True)
     body_fat_percent: Mapped[float | None] = mapped_column(nullable=True)
     target_weight_kg: Mapped[float | None] = mapped_column(nullable=True)
+    sex_for_estimates: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    age_years: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    activity_level: Mapped[str | None] = mapped_column(String(16), nullable=True)
 
 
 class AuditEvent(Base):

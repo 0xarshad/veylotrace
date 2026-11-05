@@ -101,11 +101,13 @@ class ExerciseEntry(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     workout_id: Mapped[int] = mapped_column(ForeignKey("workout_sessions.id", ondelete="CASCADE"), index=True)
     name: Mapped[str] = mapped_column(String(120))
+    body_part: Mapped[str] = mapped_column(String(60), default="")
     muscle_group: Mapped[str] = mapped_column(String(60), default="")
     sets: Mapped[int | None] = mapped_column(Integer, nullable=True)
     reps: Mapped[int | None] = mapped_column(Integer, nullable=True)
     weight_kg: Mapped[float | None] = mapped_column(Float, nullable=True)
     duration_min: Mapped[float | None] = mapped_column(Float, nullable=True)
+    progress_metric: Mapped[str | None] = mapped_column(String(16), nullable=True)
     workout: Mapped[WorkoutSession] = relationship(back_populates="exercises")
 
 

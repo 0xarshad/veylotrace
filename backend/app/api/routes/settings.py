@@ -6,7 +6,7 @@ from sqlalchemy import select
 
 from app.core.deps import DB, CurrentUser, client_ip, require_permission
 from app.core.errors import conflict, not_found
-from app.models import AuditEvent, User, UserSettings
+from app.models import AuditEvent, User, UserSettings, WeightLog
 from app.services.audit import audit
 from app.services.auth import revoke_all_sessions
 from app.services.defaults import DEFAULT_TARGETS, DEFAULT_WIDGETS, suggested_nutrition_targets
@@ -32,6 +32,9 @@ class SettingsIn(BaseModel):
     starting_weight_kg: float | None = Field(default=None, gt=20, lt=500)
     body_fat_percent: float | None = Field(default=None, ge=1, le=75)
     target_weight_kg: float | None = Field(default=None, gt=20, lt=500)
+    sex_for_estimates: Literal["female", "male"] | None = None
+    age_years: Annotated[int, Field(ge=20, le=78)] | None = None
+    activity_level: Literal["sedentary", "light", "moderate", "very_active"] | None = None
 
     @field_validator("dashboard_widgets")
     @classmethod
@@ -61,17 +64,19 @@ class SettingsIn(BaseModel):
         return v
 
 
-def settings_out(s: UserSettings) -> dict:
+def settings_out(s: UserSettings, current_weight_kg: float | None = None) -> dict:
     targets = {**DEFAULT_TARGETS, **(s.targets or {})}
+    estimate_weight = current_weight_kg or s.starting_weight_kg
     return {
         "theme": s.theme, "currency": s.currency, "week_starts_monday": s.week_starts_monday,
         "dashboard_widgets": s.dashboard_widgets if s.dashboard_widgets is not None else DEFAULT_WIDGETS,
         "available_widgets": DEFAULT_WIDGETS, "targets": targets,
-        "suggested_nutrition_targets": suggested_nutrition_targets(s.target_weight_kg, targets["calories"]) if s.target_weight_kg else None,
+        "suggested_nutrition_targets": suggested_nutrition_targets(s.target_weight_kg, targets["calories"], sex_for_estimates=s.sex_for_estimates, age_years=s.age_years, height_cm=s.height_cm, weight_kg=estimate_weight, activity_level=s.activity_level) if s.target_weight_kg else None,
         "ai_enabled": s.ai_enabled, "ai_modules": s.ai_modules or [], "available_ai_modules": AI_MODULES,
         "auto_backup_hours": s.auto_backup_hours,
         "height_cm": s.height_cm, "starting_weight_kg": s.starting_weight_kg,
         "body_fat_percent": s.body_fat_percent, "target_weight_kg": s.target_weight_kg,
+        "sex_for_estimates": s.sex_for_estimates, "age_years": s.age_years, "activity_level": s.activity_level,
     }
 
 
@@ -86,7 +91,9 @@ def get_or_create_settings(db, user_id: int) -> UserSettings:
 
 @router.get("/settings")
 def get_settings_route(db: DB, user: CurrentUser):
-    return settings_out(get_or_create_settings(db, user.id))
+    profile = get_or_create_settings(db, user.id)
+    current_weight = db.scalar(select(WeightLog.weight_kg).where(WeightLog.user_id == user.id, WeightLog.deleted_at.is_(None)).order_by(WeightLog.log_date.desc(), WeightLog.id.desc()).limit(1))
+    return settings_out(profile, current_weight)
 
 
 @router.put("/settings")
@@ -100,7 +107,8 @@ def put_settings(body: SettingsIn, request: Request, db: DB, user: CurrentUser):
         setattr(s, k, v)
     audit(db, "settings.update", user.id, client_ip(request), fields=sorted(body.model_dump(exclude_unset=True)))
     db.commit()
-    return settings_out(s)
+    current_weight = db.scalar(select(WeightLog.weight_kg).where(WeightLog.user_id == user.id, WeightLog.deleted_at.is_(None)).order_by(WeightLog.log_date.desc(), WeightLog.id.desc()).limit(1))
+    return settings_out(s, current_weight)
 
 
 # ---------------- admin ----------------

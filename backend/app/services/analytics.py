@@ -89,6 +89,33 @@ def week_starts_monday(db: Session, uid: int) -> bool:
     return True if s is None else bool(s.week_starts_monday)
 
 
+def body_part_for_muscle(muscle_group: str) -> str:
+    value = muscle_group.strip().casefold()
+    if value in {"chest", "upper chest", "lower chest"} or "pectoral" in value:
+        return "Chest"
+    if value in {"lats", "upper back & traps", "lower back", "back"} or "trap" in value:
+        return "Back"
+    if "shoulder" in value or "delt" in value:
+        return "Shoulders"
+    if "bicep" in value or "brachialis" in value:
+        return "Biceps"
+    if "tricep" in value:
+        return "Triceps"
+    if "forearm" in value:
+        return "Forearms"
+    if value == "arms":
+        return "Arms"
+    if any(word in value for word in ("quadr", "hamstring", "glute", "adductor", "abductor", "calf", "leg")):
+        return "Legs"
+    if "neck" in value:
+        return "Neck"
+    if "core" in value or "ab" in value or "oblique" in value:
+        return "Core"
+    if "full body" in value:
+        return "Full body"
+    return "Other"
+
+
 def _live(model, uid: int):
     return [model.user_id == uid, model.deleted_at.is_(None)]
 
@@ -231,13 +258,77 @@ def health_summary(db: Session, uid: int, start: date, end: date) -> dict:
     by_kind: dict[str, int] = defaultdict(int)
     daily_min: dict[date, float] = defaultdict(float)
     progression: dict[str, list] = defaultdict(list)
+    timed_exercises = {"plank", "side plank", "rkc plank", "hollow-body hold", "l-sit hold", "back extension hold", "dead hang"}
+    rep_exercises = {"pull-up", "chin-up", "assisted pull-up", "push-up", "chest dip", "triceps dip", "diamond push-up"}
     for w in workouts:
         weeks[week_start(w.performed_at.date(), monday)] += 1
         by_kind[w.kind] += 1
         daily_min[w.performed_at.date()] += w.duration_min
+    # Keep the progression picker useful even when the selected summary range is short.
+    all_gym_workouts = db.scalars(select(WorkoutSession).where(*_live(WorkoutSession, uid), WorkoutSession.kind == "gym").order_by(WorkoutSession.performed_at)).all()
+    for w in all_gym_workouts:
         for ex in w.exercises:
-            if ex.weight_kg is not None:
-                progression[ex.name].append({"date": w.performed_at.date().isoformat(), "weight_kg": ex.weight_kg, "volume": (ex.sets or 1) * (ex.reps or 1) * ex.weight_kg})
+            name_key = ex.name.strip().casefold()
+            metric = ex.progress_metric or ("duration_min" if name_key in timed_exercises else "reps" if name_key in rep_exercises else "duration_min" if ex.duration_min is not None and ex.weight_kg is None else "reps" if ex.reps is not None and ex.weight_kg is None else "weight_kg")
+            value = {
+                "weight_kg": ex.weight_kg,
+                "reps": ex.reps if ex.reps is not None else ex.weight_kg if name_key in rep_exercises else None,
+                "duration_min": ex.duration_min if ex.duration_min is not None else ex.weight_kg if name_key in timed_exercises else None,
+            }[metric]
+            progression[ex.name].append({
+                "date": w.performed_at.date().isoformat(),
+                "body_part": ex.body_part or body_part_for_muscle(ex.muscle_group),
+                "muscle_group": ex.muscle_group,
+                "metric_type": metric,
+                "metric_value": value,
+                "metric_unit": {"weight_kg": "kg", "reps": "reps", "duration_min": "min"}[metric],
+                "weight_kg": ex.weight_kg,
+                "volume": ex.sets * ex.reps * ex.weight_kg if ex.weight_kg is not None and ex.sets and ex.reps else None,
+                "sets": ex.sets,
+                "reps": ex.reps,
+                "duration_min": ex.duration_min,
+            })
+    progression = defaultdict(list, {name: rows[-100:] for name, rows in progression.items()})
+
+    this_week_start = week_start(date.today(), monday)
+    this_week_workouts = db.scalars(select(WorkoutSession).where(
+        *_live(WorkoutSession, uid),
+        WorkoutSession.kind.in_(("gym", "home")),
+        WorkoutSession.performed_at >= datetime.combine(this_week_start, time.min),
+        WorkoutSession.performed_at < datetime.combine(date.today() + timedelta(days=1), time.min),
+    ).order_by(WorkoutSession.performed_at)).all()
+    trained_groups: dict[str, dict] = {}
+    for workout in this_week_workouts:
+        for exercise_entry in workout.exercises:
+            group = exercise_entry.muscle_group.strip()
+            if not group:
+                continue
+            body_part = exercise_entry.body_part or body_part_for_muscle(group)
+            item = trained_groups.setdefault(group, {"body_part": body_part, "muscle_group": group, "sessions": set(), "exercise_count": 0, "last_trained": "", "exercises": {}})
+            item["sessions"].add(workout.id)
+            item["exercise_count"] += 1
+            item["last_trained"] = workout.performed_at.date().isoformat()
+            exercise = item["exercises"].setdefault(exercise_entry.name, {"name": exercise_entry.name, "logs": []})
+            name_key = exercise_entry.name.strip().casefold()
+            metric = exercise_entry.progress_metric or ("duration_min" if name_key in timed_exercises else "reps" if name_key in rep_exercises else "duration_min" if exercise_entry.duration_min is not None and exercise_entry.weight_kg is None else "reps" if exercise_entry.reps is not None and exercise_entry.weight_kg is None else "weight_kg")
+            value = {
+                "weight_kg": exercise_entry.weight_kg,
+                "reps": exercise_entry.reps if exercise_entry.reps is not None else exercise_entry.weight_kg if name_key in rep_exercises else None,
+                "duration_min": exercise_entry.duration_min if exercise_entry.duration_min is not None else exercise_entry.weight_kg if name_key in timed_exercises else None,
+            }[metric]
+            reps = value if metric == "reps" else exercise_entry.reps
+            duration = value if metric == "duration_min" else exercise_entry.duration_min
+            exercise["logs"].append({
+                "date": workout.performed_at.date().isoformat(),
+                "body_part": body_part,
+                "metric_type": metric,
+                "metric_value": value,
+                "metric_unit": {"weight_kg": "kg", "reps": "reps", "duration_min": "min"}[metric],
+                "sets": exercise_entry.sets,
+                "reps": reps,
+                "weight_kg": exercise_entry.weight_kg if metric == "weight_kg" else None,
+                "duration_min": duration,
+            })
     steps = {s.log_date: s.steps for s in db.scalars(select(StepLog).where(*_live(StepLog, uid), *_date_range(StepLog.log_date, start, end)))}
     sleeps = list(db.scalars(select(SleepLog).where(*_live(SleepLog, uid), *_in_range(SleepLog.wake_time, start, end)).order_by(SleepLog.wake_time)))
     weight_logs = list(db.scalars(select(WeightLog).where(*_live(WeightLog, uid)).order_by(WeightLog.log_date, WeightLog.id)))
@@ -254,8 +345,20 @@ def health_summary(db: Session, uid: int, start: date, end: date) -> dict:
         "calories_burned": r1(sum(w.calories_burned or 0 for w in workouts)),
         "distance_km": r1(sum(w.distance_km or 0 for w in workouts)),
         "weekly_frequency": [{"week": k.isoformat(), "workouts": v} for k, v in sorted(weeks.items())],
+        "muscle_groups_week_start": this_week_start.isoformat(),
+        "muscle_groups_this_week": [
+            {
+                **item,
+                "sessions": len(item["sessions"]),
+                "exercises": [
+                    {**exercise, "logs": sorted(exercise["logs"], key=lambda log: log["date"], reverse=True)}
+                    for exercise in sorted(item["exercises"].values(), key=lambda entry: entry["name"].casefold())
+                ],
+            }
+            for item in sorted(trained_groups.values(), key=lambda v: (-len(v["sessions"]), v["muscle_group"].casefold()))
+        ],
         "workout_minutes_daily": [{"date": d.isoformat(), "minutes": r1(daily_min.get(d))} for d in days_in(start, end)] if (end - start).days <= 400 else [],
-        "exercise_progression": {k: v for k, v in sorted(progression.items(), key=lambda kv: -len(kv[1]))[:8]},
+        "exercise_progression": {k: v for k, v in sorted(progression.items(), key=lambda kv: (-len(kv[1]), kv[0].casefold()))},
         "steps_total": sum(steps.values()),
         "steps_average": round(sum(steps.values()) / len(steps)) if steps else 0,
         "steps_days": len(steps),

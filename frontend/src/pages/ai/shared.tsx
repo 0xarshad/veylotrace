@@ -37,6 +37,7 @@ export interface CatalogEntry {
   id: string
   label: string
   needs_key: boolean
+  env_key_available?: boolean
   cloud: boolean
   supports_base_url: boolean
   base_url_hint: string

@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
 
 from app.core.deps import DB, client_ip, require_permission
+from app.core.config import get_settings
 from app.core.errors import AppError, bad_request, conflict, not_found
 from app.core.ratelimit import limiter
 from app.core.security import encrypt_secret, utcnow
@@ -112,7 +113,8 @@ def list_providers(db: DB, user: User = perm):
 @router.post("/providers", status_code=201)
 def add_provider(body: ProviderIn, request: Request, db: DB, user: User = perm):
     adapter = get_adapter(body.provider)
-    if adapter.needs_key and not body.api_key:
+    api_key = body.api_key or (get_settings().groq_api_key if body.provider == "groq" else None)
+    if adapter.needs_key and not api_key:
         raise AppError(422, "validation_error", f"{adapter.label} needs an API key or token.", [{"field": "api_key", "message": "Required."}])
     if db.scalar(select(AIProviderConfig.id).where(AIProviderConfig.user_id == user.id, AIProviderConfig.provider == body.provider)):
         raise conflict("This provider is already configured; edit the existing entry.", "provider_exists")
@@ -121,9 +123,9 @@ def add_provider(body: ProviderIn, request: Request, db: DB, user: User = perm):
         model=body.model or adapter.default_model, params=_validate_params(adapter, body.params),
         cloud_consent=body.cloud_consent, consent_at=utcnow() if body.cloud_consent else None,
     )
-    if body.api_key:
-        cfg.api_key_encrypted = encrypt_secret(body.api_key)
-        cfg.key_hint = body.api_key[-4:]
+    if api_key:
+        cfg.api_key_encrypted = encrypt_secret(api_key)
+        cfg.key_hint = api_key[-4:]
     db.add(cfg)
     db.flush()
     has_default = db.scalar(select(func.count()).select_from(AIProviderConfig).where(AIProviderConfig.user_id == user.id, AIProviderConfig.is_default.is_(True)))

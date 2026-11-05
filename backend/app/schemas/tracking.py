@@ -163,22 +163,26 @@ class ContributionOut(OutBase):
 # ---------------- Health ----------------
 class ExerciseIn(ORM):
     name: Annotated[str, Field(min_length=1, max_length=120)]
+    body_part: Annotated[str, Field(max_length=60)] = ""
     muscle_group: Annotated[str, Field(max_length=60)] = ""
     sets: Annotated[int, Field(ge=0, le=1000)] | None = None
     reps: Annotated[int, Field(ge=0, le=10000)] | None = None
     weight_kg: Annotated[float, Field(ge=0, le=2000)] | None = None
     duration_min: Annotated[float, Field(ge=0, le=1440)] | None = None
+    progress_metric: Literal["weight_kg", "reps", "duration_min"] | None = None
 
 
 class ExerciseOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     name: str
+    body_part: str
     muscle_group: str
     sets: int | None
     reps: int | None
     weight_kg: float | None
     duration_min: float | None
+    progress_metric: str | None
 
 
 class WorkoutIn(ORM):

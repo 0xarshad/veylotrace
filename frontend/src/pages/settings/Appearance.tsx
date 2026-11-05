@@ -117,9 +117,9 @@ function Targets({ s }: { s: Settings }) {
       <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (!hasError) save.mutate() }}>
         <div className="space-y-2 text-xs text-slate-500">
           <p>{suggestions
-            ? `Editable adult starter goals use your ${num(s.target_weight_kg, 1)} kg target weight and current calorie goal. Protein uses a general 0.8 g/kg reference; carbs, fat and fibre are estimated from calories. Calories and water remain as you set them because weight alone cannot determine personal needs.`
-            : 'Set a target weight in Body profile to get starter macro and fibre goals. Calories and water remain editable here.'}</p>
-          <button type="button" className="btn-secondary px-3 py-1.5" disabled={!suggestions} onClick={() => suggestions && setVals({ ...vals, ...Object.fromEntries(Object.entries(suggestions).map(([k, v]) => [k, String(v)])) })}>Use target-weight starter goals</button>
+            ? `Editable starter goals use your saved profile${s.target_weight_kg == null ? '' : ` and ${num(s.target_weight_kg, 1)} kg target`}. With sex, age, height, weight and activity set, calories use an adult energy estimate; protein uses a general 0.8 g/kg reference, and carbs, fat and fibre are estimated from calories. Water remains editable.`
+            : 'Complete your body profile to get starter nutrition goals. All suggested values stay editable.'}</p>
+          <button type="button" className="btn-secondary px-3 py-1.5" disabled={!suggestions} onClick={() => suggestions && setVals({ ...vals, ...Object.fromEntries(Object.entries(suggestions).map(([k, v]) => [k, String(v)])) })}>Use profile-based starter goals</button>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {keys.map((k) => {
@@ -154,36 +154,44 @@ function BodyProfile({ s }: { s: Settings }) {
     starting_weight_kg: s.starting_weight_kg,
     body_fat_percent: s.body_fat_percent,
     target_weight_kg: s.target_weight_kg,
+    sex_for_estimates: s.sex_for_estimates,
+    age_years: s.age_years,
+    activity_level: s.activity_level,
   }
-  const [values, setValues] = useState<Record<keyof typeof profile, string>>({
-    height_cm: '', starting_weight_kg: '', body_fat_percent: '', target_weight_kg: '',
-  })
-  useEffect(() => setValues(Object.fromEntries(Object.entries(profile).map(([k, v]) => [k, v == null ? '' : String(v)])) as typeof values), [s.height_cm, s.starting_weight_kg, s.body_fat_percent, s.target_weight_kg])
+  const [values, setValues] = useState<Record<keyof typeof profile, string>>({ height_cm: '', starting_weight_kg: '', body_fat_percent: '', target_weight_kg: '', sex_for_estimates: '', age_years: '', activity_level: '' })
+  useEffect(() => setValues(Object.fromEntries(Object.entries(profile).map(([k, v]) => [k, v == null ? '' : String(v)])) as typeof values), [s.height_cm, s.starting_weight_kg, s.body_fat_percent, s.target_weight_kg, s.sex_for_estimates, s.age_years, s.activity_level])
   const labels = {
     height_cm: ['Height', 'cm', 81, 249.9],
     starting_weight_kg: ['Starting weight', 'kg', 20.1, 499.9],
     body_fat_percent: ['Body fat', '%', 1, 75],
     target_weight_kg: ['Target weight', 'kg', 20.1, 499.9],
   } as const
-  const invalid = (k: keyof typeof profile) => values[k] !== '' && (!Number.isFinite(Number(values[k])) || Number(values[k]) < labels[k][2] || Number(values[k]) > labels[k][3])
+  const numberKeys = Object.keys(labels) as (keyof typeof labels)[]
+  const invalid = (k: keyof typeof labels) => values[k] !== '' && (!Number.isFinite(Number(values[k])) || Number(values[k]) < labels[k][2] || Number(values[k]) > labels[k][3])
   const dirty = (Object.keys(profile) as (keyof typeof profile)[]).some((k) => values[k] !== (profile[k] == null ? '' : String(profile[k])))
   const height = Number(values.height_cm)
   const suggested = Number.isFinite(height) && height > 80 ? Number((21.7 * (height / 100) ** 2).toFixed(1)) : null
   const save = useMutation({
-    mutationFn: () => api('/settings', { method: 'PUT', body: Object.fromEntries(Object.entries(values).filter(([, v]) => v !== '').map(([k, v]) => [k, Number(v)])) }),
+    mutationFn: () => api('/settings', { method: 'PUT', body: Object.fromEntries(Object.entries(values).filter(([, v]) => v !== '').map(([k, v]) => [k, ['height_cm', 'starting_weight_kg', 'body_fat_percent', 'target_weight_kg', 'age_years'].includes(k) ? Number(v) : v])) }),
     onSuccess: () => { qc.invalidateQueries(); toast.success('Body profile saved') },
     onError: (e) => toast.error(errorMessage(e)),
   })
   return (
     <Card title="Body profile & weight goals">
-      <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (!Object.keys(profile).some((k) => invalid(k as keyof typeof profile))) save.mutate() }}>
+      <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (!numberKeys.some(invalid)) save.mutate() }}>
         <div className="grid gap-3 sm:grid-cols-2">
-          {(Object.keys(labels) as (keyof typeof labels)[]).map((k) => (
+          {numberKeys.map((k) => (
             <TextInput key={k} label={`${labels[k][0]} (${labels[k][1]})`} type="number" min={labels[k][2]} max={labels[k][3]} step="0.1" value={values[k]} onChange={(e) => setValues({ ...values, [k]: e.target.value })} error={invalid(k) ? 'Enter a value within the shown range.' : undefined} />
           ))}
         </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <SelectInput label="Sex for estimates" options={[{ value: 'female', label: 'Female' }, { value: 'male', label: 'Male' }]} placeholder="Choose" value={values.sex_for_estimates} onChange={(e) => setValues({ ...values, sex_for_estimates: e.target.value })} />
+          <TextInput label="Age (years)" type="number" min={20} max={78} step="1" value={values.age_years} onChange={(e) => setValues({ ...values, age_years: e.target.value })} error={values.age_years !== '' && (!Number.isInteger(Number(values.age_years)) || Number(values.age_years) < 20 || Number(values.age_years) > 78) ? 'Enter an age from 20 to 78.' : undefined} />
+          <SelectInput label="Activity level" options={[{ value: 'sedentary', label: 'Sedentary' }, { value: 'light', label: 'Light' }, { value: 'moderate', label: 'Moderate' }, { value: 'very_active', label: 'Very active' }]} placeholder="Choose" value={values.activity_level} onChange={(e) => setValues({ ...values, activity_level: e.target.value })} />
+        </div>
         {suggested != null && <p className="text-xs text-slate-500">Suggested reference target at BMI 21.7: {suggested} kg. General adult BMI reference only.</p>}
-        <button className="btn-primary" disabled={save.isPending || !dirty || (Object.keys(profile) as (keyof typeof profile)[]).some(invalid)}>{save.isPending ? 'Saving…' : 'Save body profile'}</button>
+        <p className="text-xs text-slate-500">Adult BMI reference does not change by sex. Sex, age and activity are used only for editable calorie estimates.</p>
+        <button className="btn-primary" disabled={save.isPending || !dirty || numberKeys.some(invalid) || (values.age_years !== '' && (!Number.isInteger(Number(values.age_years)) || Number(values.age_years) < 20 || Number(values.age_years) > 78))}>{save.isPending ? 'Saving…' : 'Save body profile'}</button>
       </form>
     </Card>
   )

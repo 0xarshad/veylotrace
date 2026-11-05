@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useId, useMemo, useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronLeft, ChevronRight, Copy, Pencil, Plus, RotateCcw, Search, Trash2, X } from 'lucide-react'
 import { api, ApiError, type ListResponse } from '@/api/client'
@@ -17,6 +17,9 @@ export interface FieldDef {
   type: 'text' | 'textarea' | 'number' | 'money' | 'date' | 'datetime' | 'select' | 'checkbox' | 'ref' | 'list'
   required?: boolean
   options?: Option[]
+  optionsFor?: (values: Row) => Option[]
+  deriveOnChange?: (value: any, values: Row) => Row
+  defaultFor?: (values: Row) => any
   ref?: { resource: string; label: (r: Row) => string; params?: Record<string, string>; rootsOnly?: boolean; parentField?: string }
   default?: string | number | boolean | (() => string | number | boolean)
   min?: number
@@ -28,6 +31,12 @@ export interface FieldDef {
   showIf?: (values: Row) => boolean
   listFields?: FieldDef[]
   listLabel?: string
+  groupField?: string
+  groupOptions?: Option[]
+  groupOptionsFor?: (parentGroup: string) => Option[]
+  bodyPartField?: string
+  bodyPartOptions?: Option[]
+  bodyPartForGroup?: (group: string) => string
   maxLength?: number
 }
 
@@ -80,7 +89,7 @@ function fromRow(fields: FieldDef[], row: Row): Row {
   for (const f of fields) {
     const v = row[f.name]
     if (f.type === 'list') out[f.name] = ((v as Row[]) ?? []).map((r) => fromRow(f.listFields ?? [], r))
-    else if (v === null || v === undefined) out[f.name] = f.type === 'checkbox' ? false : ''
+    else if (v === null || v === undefined || (v === '' && f.defaultFor)) out[f.name] = f.defaultFor ? f.defaultFor(out) : f.type === 'checkbox' ? false : f.default !== undefined ? initialValue(f) : ''
     else if (f.type === 'datetime') out[f.name] = String(v).slice(0, 16)
     else if (f.type === 'date') out[f.name] = String(v).slice(0, 10)
     else if (f.type === 'checkbox') out[f.name] = !!v
@@ -95,7 +104,8 @@ function toPayload(fields: FieldDef[], values: Row, editing: boolean): Row {
     if (f.showIf && !f.showIf(values)) continue
     const v = values[f.name]
     if (f.type === 'list') {
-      out[f.name] = ((v as Row[]) ?? []).map((r) => toPayload(f.listFields ?? [], r, false))
+      const rows = ((v as Row[]) ?? []).filter((r) => !f.groupField || String(r.name ?? '').trim() !== '')
+      out[f.name] = rows.map((r) => toPayload(f.listFields ?? [], r, false))
       continue
     }
     if (f.type === 'checkbox') {
@@ -131,6 +141,7 @@ function RefSelect({ field, value, onChange, error, formValues }: { field: Field
 }
 
 export function FieldInput({ field, value, onChange, error, formValues }: { field: FieldDef; value: any; onChange: (v: any) => void; error?: string; formValues?: Row }) {
+  const listId = useId()
   const common = { label: field.label, error, required: field.required }
   switch (field.type) {
     case 'textarea':
@@ -149,12 +160,126 @@ export function FieldInput({ field, value, onChange, error, formValues }: { fiel
     case 'checkbox':
       return <Checkbox label={field.label} checked={!!value} onChange={onChange} help={field.help} />
     default:
-      return <TextInput {...common} value={value} maxLength={field.maxLength ?? 255} onChange={(e) => onChange(e.target.value)} placeholder={field.placeholder} help={field.help} />
+      return <>
+        <TextInput {...common} value={value} maxLength={field.maxLength ?? 255} onChange={(e) => onChange(e.target.value)} placeholder={field.placeholder} help={field.help} list={field.options || field.optionsFor ? listId : undefined} />
+        {(field.options || field.optionsFor) && <datalist id={listId}>{(field.optionsFor?.(formValues ?? {}) ?? field.options ?? []).map((option) => <option key={option.value} value={option.label} />)}</datalist>}
+      </>
   }
 }
 
 function ListEditor({ field, rows, onChange }: { field: FieldDef; rows: Row[]; onChange: (rows: Row[]) => void }) {
+  const [newGroup, setNewGroup] = useState('')
+  const [newBodyPart, setNewBodyPart] = useState('')
+  const [newMuscleGroups, setNewMuscleGroups] = useState<Record<string, string>>({})
   const blank = () => Object.fromEntries((field.listFields ?? []).map((f) => [f.name, initialValue(f)]))
+  if (field.bodyPartField && field.groupField) {
+    const bodyPartField = field.bodyPartField
+    const muscleField = field.groupField
+    const exerciseFields = (field.listFields ?? []).filter((item) => item.name !== bodyPartField && item.name !== muscleField)
+    const bodyPartOf = (row: Row) => String(row[bodyPartField] ?? '').trim() || (row.name ? field.bodyPartForGroup?.(String(row[muscleField] ?? '')) ?? 'Other' : '')
+    const muscleOf = (row: Row) => String(row[muscleField] ?? '').trim() || (row.name ? 'Unassigned' : '')
+    const bodyParts = [...new Set(rows.map(bodyPartOf).filter(Boolean))]
+    const addBodyPart = (part: string) => onChange([...rows, { ...blank(), [bodyPartField]: part }])
+    const addMuscle = (part: string, muscle: string) => onChange([...rows, { ...blank(), [bodyPartField]: part, [muscleField]: muscle }])
+    const addExercise = (part: string, muscle: string) => addMuscle(part, muscle)
+    const updateRow = (index: number, key: string, value: any) => onChange(rows.map((row, rowIndex) => {
+      if (rowIndex !== index) return row
+      const derive = field.listFields?.find((item) => item.name === key)?.deriveOnChange?.(value, row) ?? {}
+      return { ...row, [key]: value, ...derive }
+    }))
+    return (
+      <div className="sm:col-span-2 space-y-3">
+        <div className="flex flex-wrap items-end gap-2">
+          <span className="label mb-1 mr-auto">Exercises by body part</span>
+          <div className="w-56"><SelectInput label="Add body part" options={field.bodyPartOptions ?? []} placeholder="Choose a body part" value={newBodyPart} onChange={(e) => setNewBodyPart(e.target.value)} /></div>
+          <button type="button" className="btn-secondary" disabled={!newBodyPart} onClick={() => { addBodyPart(newBodyPart); setNewBodyPart('') }}>Add body part</button>
+        </div>
+        {bodyParts.length === 0 && <p className="rounded-lg border border-dashed border-slate-300 p-3 text-center text-xs text-slate-500 dark:border-slate-700">Add a body part, then select a muscle group and add exercises.</p>}
+        {bodyParts.map((part) => {
+          const rowsForPart = rows.map((row, index) => ({ row, index })).filter(({ row }) => bodyPartOf(row) === part)
+          const knownMuscles = field.groupOptionsFor?.(part) ?? []
+          const loggedMuscles = rowsForPart.map(({ row }) => muscleOf(row)).filter((muscle) => muscle !== 'Unassigned' && muscle !== '')
+          const muscleOptions = [...new Set([...knownMuscles.map((option) => String(option.value)), ...loggedMuscles])].map((muscle) => ({ value: muscle, label: muscle }))
+          const subgroups = [...new Set(rowsForPart.map(({ row }) => muscleOf(row)).filter(Boolean))]
+          return (
+            <section key={part} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h4 className="text-sm font-semibold">{part}</h4>
+                <div className="flex items-end gap-2">
+                  <div className="w-52"><SelectInput label="Add muscle group" options={muscleOptions} placeholder="Choose a muscle" value={newMuscleGroups[part] ?? ''} onChange={(e) => setNewMuscleGroups((current) => ({ ...current, [part]: e.target.value }))} /></div>
+                  <button type="button" className="btn-ghost px-2 py-1.5 text-xs" disabled={!newMuscleGroups[part]} onClick={() => { addMuscle(part, newMuscleGroups[part]); setNewMuscleGroups((current) => ({ ...current, [part]: '' })) }}>Add muscle</button>
+                </div>
+              </div>
+              {subgroups.length === 0 && <p className="text-xs text-slate-500">Choose a muscle group to add exercises under it.</p>}
+              <div className="space-y-3">
+                {subgroups.map((muscle) => {
+                  const indices = rowsForPart.filter(({ row }) => muscleOf(row) === muscle).map(({ index }) => index)
+                  const fieldsForMuscle = muscle === 'Unassigned' ? field.listFields ?? [] : exerciseFields
+                  return (
+                    <div key={muscle} className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800/50">
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <h5 className="text-sm font-medium">{muscle}<span className="ml-2 text-xs font-normal text-slate-500">{indices.length} exercise{indices.length === 1 ? '' : 's'}</span></h5>
+                        {muscle !== 'Unassigned' && <button type="button" className="btn-ghost px-2 py-1 text-xs" onClick={() => addExercise(part, muscle)}><Plus className="h-3.5 w-3.5" /> Add exercise</button>}
+                      </div>
+                      <div className="space-y-2">
+                        {indices.map((index) => (
+                          <div key={index} className="relative grid grid-cols-2 gap-2 rounded-lg border border-slate-200 bg-white p-3 pr-9 dark:border-slate-700 dark:bg-slate-900 sm:grid-cols-4">
+                            {fieldsForMuscle.map((item) => <FieldInput key={item.name} field={item} value={rows[index][item.name]} formValues={rows[index]} onChange={(value) => updateRow(index, item.name, value)} />)}
+                            <button type="button" aria-label="Remove exercise" className="absolute right-2 top-2 rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-rose-600 dark:hover:bg-slate-800" onClick={() => onChange(rows.filter((_, rowIndex) => rowIndex !== index))}><X className="h-4 w-4" /></button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </section>
+          )
+        })}
+      </div>
+    )
+  }
+  if (field.groupField) {
+    const groupField = field.groupField
+    const groups = [...new Set(rows.map((row) => String(row[groupField] ?? '').trim() || (row.name ? 'Unassigned' : '')).filter(Boolean))]
+    const exerciseFields = (field.listFields ?? []).filter((item) => item.name !== groupField)
+    const addExercise = (group: string) => onChange([...rows, { ...blank(), [groupField]: group }])
+    const updateRow = (index: number, key: string, value: any) => onChange(rows.map((row, rowIndex) => {
+      if (rowIndex !== index) return row
+      const derive = field.listFields?.find((item) => item.name === key)?.deriveOnChange?.(value, row) ?? {}
+      return { ...row, [key]: value, ...derive }
+    }))
+    return (
+      <div className="sm:col-span-2 space-y-3">
+        <div className="flex flex-wrap items-end gap-2">
+          <span className="label mb-1 mr-auto">{field.label}</span>
+          <div className="w-56"><SelectInput label="Add muscle group" options={field.groupOptions ?? []} placeholder="Choose a group" value={newGroup} onChange={(e) => setNewGroup(e.target.value)} /></div>
+          <button type="button" className="btn-secondary" disabled={!newGroup} onClick={() => { addExercise(newGroup); setNewGroup('') }}>Add group</button>
+        </div>
+        {groups.length === 0 && <p className="rounded-lg border border-dashed border-slate-300 p-3 text-center text-xs text-slate-500 dark:border-slate-700">Add a muscle group, then add exercises to it.</p>}
+        {groups.map((group) => {
+          const indices = rows.map((row, index) => (String(row[groupField] ?? '').trim() || (row.name ? 'Unassigned' : '')) === group ? index : -1).filter((index) => index >= 0)
+          const fieldsForGroup = group === 'Unassigned' ? field.listFields ?? [] : exerciseFields
+          return (
+            <section key={group} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <h4 className="text-sm font-semibold">{group}<span className="ml-2 text-xs font-normal text-slate-500">{indices.length} exercise{indices.length === 1 ? '' : 's'}</span></h4>
+                <button type="button" className="btn-ghost px-2 py-1 text-xs" onClick={() => addExercise(group)}><Plus className="h-3.5 w-3.5" /> Add exercise</button>
+              </div>
+              <div className="space-y-2">
+                {indices.map((index) => (
+                  <div key={index} className="relative grid grid-cols-2 gap-2 rounded-lg bg-slate-50 p-3 pr-9 dark:bg-slate-800/70 sm:grid-cols-4">
+                    {fieldsForGroup.map((item) => <FieldInput key={item.name} field={item} value={rows[index][item.name]} formValues={rows[index]} onChange={(value) => updateRow(index, item.name, value)} />)}
+                    <button type="button" aria-label="Remove exercise" className="absolute right-2 top-2 rounded p-1 text-slate-400 hover:bg-white hover:text-rose-600 dark:hover:bg-slate-700" onClick={() => onChange(rows.filter((_, rowIndex) => rowIndex !== index))}><X className="h-4 w-4" /></button>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )
+        })}
+      </div>
+    )
+  }
   return (
     <div className="sm:col-span-2">
       <div className="mb-1 flex items-center justify-between">
@@ -168,7 +293,7 @@ function ListEditor({ field, rows, onChange }: { field: FieldDef; rows: Row[]; o
         {rows.map((r, i) => (
           <div key={i} className="relative grid grid-cols-2 gap-2 rounded-lg border border-slate-200 p-3 pr-9 dark:border-slate-800 sm:grid-cols-4">
             {(field.listFields ?? []).map((lf) => (
-              <FieldInput key={lf.name} field={lf} value={r[lf.name]} onChange={(v) => onChange(rows.map((x, j) => (j === i ? { ...x, [lf.name]: v } : x)))} />
+              <FieldInput key={lf.name} field={lf} value={r[lf.name]} formValues={r} onChange={(v) => onChange(rows.map((x, j) => (j === i ? { ...x, [lf.name]: v, ...(lf.name === 'muscle_group' ? { name: '' } : {}) } : x)))} />
             ))}
             <button type="button" aria-label="Remove row" className="absolute right-2 top-2 rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-rose-600 dark:hover:bg-slate-800" onClick={() => onChange(rows.filter((_, j) => j !== i))}>
               <X className="h-4 w-4" />

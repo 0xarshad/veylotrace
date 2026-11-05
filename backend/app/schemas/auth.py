@@ -12,6 +12,23 @@ class RegisterIn(BaseModel):
     weight_kg: float = Field(gt=20, lt=500)
     body_fat_percent: float | None = Field(default=None, ge=1, le=75)
     target_weight_kg: float = Field(gt=20, lt=500)
+    sex_for_estimates: str
+    age_years: int = Field(ge=20, le=78)
+    activity_level: str
+
+    @field_validator("sex_for_estimates")
+    @classmethod
+    def _sex_for_estimates(cls, v: str) -> str:
+        if v not in {"female", "male"}:
+            raise ValueError("Choose female or male.")
+        return v
+
+    @field_validator("activity_level")
+    @classmethod
+    def _activity_level(cls, v: str) -> str:
+        if v not in {"sedentary", "light", "moderate", "very_active"}:
+            raise ValueError("Choose an activity level.")
+        return v
 
     @field_validator("name")
     @classmethod

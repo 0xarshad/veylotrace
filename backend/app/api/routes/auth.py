@@ -51,6 +51,7 @@ def register(body: RegisterIn, request: Request, db: DB):
     user = svc.register_user(
         db, body.name, body.email, body.password, body.confirm_password, ip,
         body.height_cm, body.weight_kg, body.body_fat_percent, body.target_weight_kg,
+        body.sex_for_estimates, body.age_years, body.activity_level,
     )
     required = s.verification_required
     msg = "Account created. Check your email to verify your address." if required else "Account created. You can sign in now."

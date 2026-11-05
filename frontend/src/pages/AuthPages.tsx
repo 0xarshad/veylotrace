@@ -3,7 +3,7 @@ import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react
 import { CheckCircle2, Circle } from 'lucide-react'
 import { api, ApiError } from '@/api/client'
 import { useAuth } from '@/auth/AuthContext'
-import { TextInput } from '@/components/ui/Form'
+import { SelectInput, TextInput } from '@/components/ui/Form'
 import { Spinner } from '@/components/ui/Common'
 import { checkPassword } from '@/lib/password'
 import { errorMessage } from '@/lib/format'
@@ -130,7 +130,7 @@ export function PasswordStrength({ password, email, name }: { password: string; 
 export function RegisterPage() {
   const { status } = useAuth()
   const navigate = useNavigate()
-  const [form, setForm] = useState({ name: '', email: '', password: '', confirm_password: '', height_cm: '', weight_kg: '', body_fat_percent: '' })
+  const [form, setForm] = useState({ name: '', email: '', password: '', confirm_password: '', height_cm: '', weight_kg: '', body_fat_percent: '', sex_for_estimates: '', age_years: '', activity_level: '' })
   const [targetMode, setTargetMode] = useState<'suggested' | 'custom'>('suggested')
   const [customTarget, setCustomTarget] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -148,6 +148,15 @@ export function RegisterPage() {
   const referenceMin = hasHeight ? Number((18.5 * heightM * heightM).toFixed(1)) : null
   const referenceMax = hasHeight ? Number((24.9 * heightM * heightM).toFixed(1)) : null
   const targetWeight = targetMode === 'suggested' ? suggestedTarget : Number(customTarget)
+  const activityFactors: Record<string, number> = { sedentary: 1.2, light: 1.375, moderate: 1.55, very_active: 1.725 }
+  const age = Number(form.age_years)
+  const weight = Number(form.weight_kg)
+  const estimatedCalories = hasHeight && weight > 20 && age >= 20 && age <= 78 && form.sex_for_estimates && activityFactors[form.activity_level]
+    ? Math.max(1200, Math.round(( (10 * weight + 6.25 * height - 5 * age + (form.sex_for_estimates === 'male' ? 5 : -161)) * activityFactors[form.activity_level]) / 50) * 50)
+    : null
+  const starterProtein = targetWeight ? Math.max(Math.round(targetWeight * 0.8), Math.round((estimatedCalories ?? 2000) * 0.1 / 4)) : null
+  const starterCarbs = estimatedCalories && starterProtein != null ? Math.round(Math.max(estimatedCalories - starterProtein * 4, 0) * 0.65 / 4) : null
+  const starterFat = estimatedCalories && starterProtein != null ? Math.round(Math.max(estimatedCalories - starterProtein * 4, 0) * 0.35 / 9) : null
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
@@ -160,7 +169,7 @@ export function RegisterPage() {
       if (!targetWeight || !Number.isFinite(targetWeight)) return setErrors({ target_weight_kg: 'Enter a target weight.' })
       const res = await api<{ message: string; verification_required: boolean }>('/auth/register', {
         method: 'POST', auth: false,
-        body: { ...form, height_cm: height, weight_kg: Number(form.weight_kg), body_fat_percent: form.body_fat_percent ? Number(form.body_fat_percent) : null, target_weight_kg: targetWeight },
+        body: { ...form, height_cm: height, weight_kg: Number(form.weight_kg), age_years: age, body_fat_percent: form.body_fat_percent ? Number(form.body_fat_percent) : null, target_weight_kg: targetWeight },
       })
       setNeedsVerify(res.verification_required)
       setDone(res.message)
@@ -193,6 +202,12 @@ export function RegisterPage() {
         <TextInput label="Name" autoComplete="name" required value={form.name} onChange={set('name')} error={errors.name} maxLength={100} />
         <TextInput label="Email" type="email" autoComplete="email" required value={form.email} onChange={set('email')} error={errors.email} />
         <div className="grid gap-3 sm:grid-cols-3">
+          <SelectInput label="Sex for estimates" required value={form.sex_for_estimates} onChange={set('sex_for_estimates')} options={[{ value: 'female', label: 'Female' }, { value: 'male', label: 'Male' }]} placeholder="Choose" />
+          <TextInput label="Age" type="number" inputMode="numeric" min={20} max={78} step="1" required value={form.age_years} onChange={set('age_years')} error={errors.age_years} />
+          <SelectInput label="Activity level" required value={form.activity_level} onChange={set('activity_level')} options={[{ value: 'sedentary', label: 'Sedentary' }, { value: 'light', label: 'Light' }, { value: 'moderate', label: 'Moderate' }, { value: 'very_active', label: 'Very active' }]} placeholder="Choose" />
+        </div>
+        <p className="-mt-2 text-xs text-slate-500">Sex, age and activity are used only for editable adult nutrition estimates.</p>
+        <div className="grid gap-3 sm:grid-cols-3">
           <TextInput label="Height (cm)" type="number" inputMode="decimal" min={80.1} max={249.9} step="0.1" required value={form.height_cm} onChange={set('height_cm')} error={errors.height_cm} />
           <TextInput label="Current weight (kg)" type="number" inputMode="decimal" min={20.1} max={499.9} step="0.1" required value={form.weight_kg} onChange={set('weight_kg')} error={errors.weight_kg} />
           <TextInput label="Body fat (%)" type="number" inputMode="decimal" min={1} max={75} step="0.1" value={form.body_fat_percent} onChange={set('body_fat_percent')} error={errors.body_fat_percent} help="Optional if you know it." />
@@ -209,7 +224,8 @@ export function RegisterPage() {
             <span>Choose my own target</span>
           </label>
           {targetMode === 'custom' && <TextInput label="Your target (kg)" type="number" inputMode="decimal" min={20.1} max={499.9} step="0.1" required value={customTarget} onChange={(e) => setCustomTarget(e.target.value)} error={errors.target_weight_kg} />}
-          <p className="text-xs text-slate-500">The BMI range is a general adult screening reference, not a diagnosis or personalized medical goal.</p>
+          {estimatedCalories != null && <p className="rounded-lg bg-slate-50 p-2 text-sm dark:bg-slate-800/70">Starter nutrition estimate: <strong>{estimatedCalories} kcal</strong>, {starterProtein} g protein, {starterCarbs} g carbs and {starterFat} g fat per day. Water stays at the editable default.</p>}
+          <p className="text-xs text-slate-500">The adult BMI reference range is the same for women and men. It is a screening reference, not a diagnosis or personalized medical goal. Calorie estimates use age, sex, height, current weight and activity, and can be changed later.</p>
         </fieldset>
         <div>
           <TextInput label="Password" type="password" autoComplete="new-password" required value={form.password} onChange={set('password')} error={errors.password} />

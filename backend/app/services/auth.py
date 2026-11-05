@@ -77,6 +77,7 @@ def send_verification(db: Session, user: User) -> None:
 def register_user(
     db: Session, name: str, email: str, password: str, confirm: str, ip: str,
     height_cm: float, weight_kg: float, body_fat_percent: float | None, target_weight_kg: float,
+    sex_for_estimates: str, age_years: int, activity_level: str,
 ) -> User:
     if password != confirm:
         raise bad_request("Passwords do not match.", "password_mismatch")
@@ -103,9 +104,9 @@ def register_user(
         raise conflict("An account with this email already exists.", "email_taken")
     db.add(UserSettings(
         user_id=user.id, dashboard_widgets=list(DEFAULT_WIDGETS),
-        targets={**DEFAULT_TARGETS, **suggested_nutrition_targets(target_weight_kg, DEFAULT_TARGETS["calories"])},
+        targets={**DEFAULT_TARGETS, **suggested_nutrition_targets(target_weight_kg, sex_for_estimates=sex_for_estimates, age_years=age_years, height_cm=height_cm, weight_kg=weight_kg, activity_level=activity_level)},
         height_cm=height_cm, starting_weight_kg=weight_kg, body_fat_percent=body_fat_percent,
-        target_weight_kg=target_weight_kg,
+        target_weight_kg=target_weight_kg, sex_for_estimates=sex_for_estimates, age_years=age_years, activity_level=activity_level,
     ))
     db.add(WeightLog(user_id=user.id, log_date=date.today(), weight_kg=weight_kg, body_fat_percent=body_fat_percent, notes="Starting measurement"))
     seed_default_categories(db, user.id)

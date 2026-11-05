@@ -102,7 +102,7 @@ export function ProviderDialog({ catalog, providers, editing, onClose }: Props) 
     setError(null)
     setFieldErrors({})
     if (!entry) return
-    if (!editing && entry.needs_key && !apiKey) return setFieldErrors({ api_key: 'An API key is required for this provider.' })
+    if (!editing && entry.needs_key && !apiKey && !entry.env_key_available) return setFieldErrors({ api_key: 'An API key is required for this provider.' })
     if (keyShort) return setFieldErrors({ api_key: 'Key looks too short.' })
     save.mutate()
   }
@@ -139,7 +139,7 @@ export function ProviderDialog({ catalog, providers, editing, onClose }: Props) 
           <p className="rounded-lg bg-slate-50 p-2 text-xs text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">{providerNote(entry)}</p>
 
           {(entry.needs_key || editing?.has_key) && (
-            <Field label={entry.needs_key ? 'API key / token' : 'API key / token (optional)'} htmlFor="prov-key" error={fieldErrors.api_key} help={editing?.has_key ? `Leave blank to keep the saved key (${editing.key_hint ?? 'saved'}). Enter a new one to replace it.` : undefined}>
+            <Field label={entry.needs_key ? 'API key / token' : 'API key / token (optional)'} htmlFor="prov-key" error={fieldErrors.api_key} help={editing?.has_key ? `Leave blank to keep the saved key (${editing.key_hint ?? 'saved'}). Enter a new one to replace it.` : entry.env_key_available ? 'A Groq key from install.sh is available. Leave blank to use it, or enter a different key.' : undefined}>
               <input
                 id="prov-key"
                 type="password"
@@ -147,7 +147,7 @@ export function ProviderDialog({ catalog, providers, editing, onClose }: Props) 
                 autoComplete="new-password"
                 spellCheck={false}
                 value={apiKey}
-                placeholder={editing?.has_key ? 'Leave blank to keep the saved key' : ''}
+                placeholder={entry.env_key_available ? 'Use the Groq key saved during installation' : editing?.has_key ? 'Leave blank to keep the saved key' : ''}
                 onChange={(e) => setApiKey(e.target.value)}
               />
             </Field>
